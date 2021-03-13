@@ -21,21 +21,34 @@ const useStyles = makeStyles({
 
 export default function GenericSlider(props) {
   const classes = useStyles();
-  const [value, setValue] = useState(50);
-
   const socket = useContext(SocketContext);
 
-  const handleChange = (event, newValue) => {
-    setValue(newValue);
-    // emit slider value
-    socket.emit(props.volume ? "VOL_CHANGE" : "MIC_CHANGE", value);
+  const handleChange = (_, newValue) => {
+    // send updated slider value
+    socket.send(
+      JSON.stringify({
+        type: props.volume ? "VOL" : "MIC",
+        value: props.value,
+      })
+    );
+    props.setValue(newValue);
+  };
+
+  const handleMute = (_) => {
+    socket.send(
+      JSON.stringify({
+        type: props.volume ? "MUTE_VOL" : "MUTE_MIC",
+        value: !props.muted,
+      })
+    );
+    props.setMute(!props.muted);
   };
 
   // called when component is mounted
-  useEffect(() => {
-    // get current volumes?
-    // socket.emit(props.volume ? "VOLUME_SLIDER" : "MIC_SLIDER", value);
-  }, [socket, value, props.volume]);
+  // useEffect(() => {
+  //   // get current volumes?
+  //   // socket.emit(props.volume ? "VOLUME_SLIDER" : "MIC_SLIDER", value);
+  // }, [socket, value, props.volume]);
   return (
     <div className={classes.root}>
       <Typography id="continuous-slider" gutterBottom>
@@ -45,16 +58,20 @@ export default function GenericSlider(props) {
         <Grid item>{props?.volume ? <VolumeMuteIcon /> : <MicNoneIcon />}</Grid>
         <Grid item xs>
           <Slider
-            disabled={!(props.connected)}
-            value={value}
+            disabled={!props.connected}
+            value={props.value}
             onChange={handleChange}
             aria-labelledby="continuous-slider"
           />
         </Grid>
         <Grid item>{props?.volume ? <VolumeUp /> : <MicIcon />}</Grid>
         <Grid item>
-          <Button variant="contained" disabled={value === 0}>
-            {props?.volume ? <VolumeOffIcon /> : <MicOffIcon />}
+          <Button
+            variant="contained"
+            disabled={props.value === 0 || !props.connected}
+            onClick={handleMute}
+          >
+            {props?.volume ? (props?.muted ? <VolumeUp /> : <VolumeOffIcon />) : (props?.muted ? <MicOffIcon /> : <MicIcon />) }
           </Button>
         </Grid>
       </Grid>

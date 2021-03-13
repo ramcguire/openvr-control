@@ -40,7 +40,7 @@ export default function ConnectMenu(props) {
     [classes.buttonSuccess]: props.connected,
   });
 
-  const socket = useContext(SocketContext);
+  //const socket = useContext(SocketContext);
 
   // React.useEffect(() => {
   //   return () => {
@@ -49,7 +49,7 @@ export default function ConnectMenu(props) {
   // }, []);
 
   const handleButtonClick = () => {
-    if (!props.connecting) {
+    if (!props.connecting && !props.connected) {
       // open the socket
       props.connect();
     }
