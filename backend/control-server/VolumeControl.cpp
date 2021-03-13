@@ -2,14 +2,14 @@
 
 extern GUID g_guidMyContext;
 
-CVolumeMonitor::CVolumeMonitor(server* s)
+CVolumeMonitor::CVolumeMonitor(server* s, BOOL volume)
     : m_bRegisteredForEndpointNotifications(FALSE),
     m_bRegisteredForVolumeNotifications(FALSE),
     m_cRef(1),
     s(s),
-    hasHandler(FALSE) {}
+    volume(volume) {}
 
-CVolumeMonitor::~CVolumeMonitor() { Dispose(); }
+CVolumeMonitor::~CVolumeMonitor() {}
 
 // ----------------------------------------------------------------------
 //  Call when the app is done with this object before calling release.
@@ -74,10 +74,10 @@ HRESULT CVolumeMonitor::AttachToDefaultEndpoint() {
     m_csEndpoint.Enter();
 
     // get the default music & movies playback device
-    HRESULT hr = m_spEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia,
+    HRESULT hr = m_spEnumerator->GetDefaultAudioEndpoint(volume == TRUE ? eRender : eCapture, eMultimedia,
         &m_spAudioEndpoint);
     if (SUCCEEDED(hr)) {
-        // get the volume control for it
+        // get the volume control for rendering (headphone/speaker) device
         hr = m_spAudioEndpoint->Activate(__uuidof(m_spVolumeControl),
             CLSCTX_INPROC_SERVER, NULL,
             (void**)&m_spVolumeControl);
@@ -150,7 +150,6 @@ HRESULT CVolumeMonitor::OnDefaultDeviceChanged(EDataFlow flow, ERole role,
 HRESULT CVolumeMonitor::OnNotify(PAUDIO_VOLUME_NOTIFICATION_DATA pNotify) {
     // something changed outside of our context
     if (pNotify->guidEventContext != g_guidMyContext) {
-        std::cout << "Something changed external" << std::endl;
         DispatchWebsocketMessage(GetLevelInfoJson());
     }
 
@@ -195,8 +194,6 @@ void CVolumeMonitor::SetMasterVolume(const float& value) {
 void CVolumeMonitor::AttachWebsocket(websocketpp::connection_hdl handle) {
     hdl = handle;
     hasHandler = TRUE;
-    s->send(hdl, "{\"text\": \"CVolumeMonitor attached to websocket\"}",
-        websocketpp::frame::opcode::text);
 }
 
 string CVolumeMonitor::GetLevelInfoJson() {
@@ -205,9 +202,10 @@ string CVolumeMonitor::GetLevelInfoJson() {
 
     Document d;
     d.SetObject();
-    d.AddMember("vMuted", info.bMuted, d.GetAllocator());
-    d.AddMember("vVolume", (int)(info.fMasterVolume * 100), d.GetAllocator());
+    d.AddMember(volume == TRUE ? "vMuted" : "mMuted", info.bMuted, d.GetAllocator());
+    d.AddMember(volume == TRUE ? "vVolume" : "mVolume", (int)(info.fMasterVolume * 100), d.GetAllocator());
     d.AddMember("state", true, d.GetAllocator());
+    d.AddMember("type", volume == TRUE ? "v" : "m", d.GetAllocator());
 
     StringBuffer buffer;
     buffer.Clear();

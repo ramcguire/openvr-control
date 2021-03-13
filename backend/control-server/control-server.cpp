@@ -1,5 +1,6 @@
 // websocket-backend.cpp : This file contains the 'main' function. Program execution begins and ends there.
 #include "VolumeControl.h"
+#include "DeviceWrapper.h"
 
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
@@ -15,7 +16,7 @@ using std::string;
 
 GUID g_guidMyContext = GUID_NULL;
 
-void on_message(server* s, websocketpp::connection_hdl hdl, message_ptr msg, CVolumeMonitor* vol) {
+void on_message(server* s, websocketpp::connection_hdl hdl, message_ptr msg, DeviceWrapper* wrapper) {
 	string payload = msg->get_payload();
 
 	if (payload == "stop-listening") {
@@ -27,44 +28,27 @@ void on_message(server* s, websocketpp::connection_hdl hdl, message_ptr msg, CVo
 		d.Parse(payload.c_str());
 		if (d["type"] == "VOL") {
 			// change volume
-			vol->SetMasterVolume(d["value"].GetFloat() / 100);
+			wrapper->SetMasterVolume(d["value"].GetFloat() / 100);
 		}
 		else if (d["type"] == "MIC") {
-			// TODO: change mic volume
+			wrapper->SetMicVolume(d["value"].GetFloat() / 100);
 		}
 		else if (d["type"] == "MUTE_VOL") {
-			vol->SetMasterMute(d["value"].GetBool());
+			wrapper->SetMasterMute(d["value"].GetBool());
 		}
 		else if (d["type"] == "MUTE_MIC") {
-			// TODO: mute mic
+			wrapper->SetMicMute(d["value"].GetBool());
 		}
 	}
 }
 
-// Gets a JSON string representing the current state
-string convert_to_json(VOLUME_INFO* info) {
-	Document d;
-	d.SetObject();
-
-	d.AddMember("vMuted", info->bMuted, d.GetAllocator());
-	d.AddMember("vVolume", (int)(info->fMasterVolume * 100), d.GetAllocator());
-	d.AddMember("state", true, d.GetAllocator());
-
-	StringBuffer buffer;
-	buffer.Clear();
-
-	Writer<StringBuffer> writer(buffer);
-
-	d.Accept(writer);
-
-	return string(buffer.GetString(), buffer.GetSize());
-}
-
-void on_connect(server* s, websocketpp::connection_hdl hdl, /*Volume vol*/ CVolumeMonitor* vol) {
+void on_connect(server* s, websocketpp::connection_hdl hdl, /*Volume vol CVolumeMonitor* vol*/ DeviceWrapper* wrapper) {
 	VOLUME_INFO* info = new VOLUME_INFO();
-	vol->GetLevelInfo(info);
-	vol->AttachWebsocket(hdl);
-	vol->DispatchWebsocketMessage(vol->GetLevelInfoJson());
+	//vol->GetLevelInfo(info);
+	//vol->AttachWebsocket(hdl);
+	//vol->DispatchWebsocketMessage(vol->GetLevelInfoJson());
+	wrapper->AttachWebsocket(hdl);
+	wrapper->GetDeviceState();
 }
 
 int main() {
@@ -75,11 +59,12 @@ int main() {
 	// check for error?
 
 	server s;
-	CVolumeMonitor* vol = new CVolumeMonitor(&s);
-	vol->Initialize();
+	//CVolumeMonitor* vol = new CVolumeMonitor(&s, TRUE);
+	//vol->Initialize();
+	DeviceWrapper* wrapper = new DeviceWrapper(&s);
 
-	s.set_message_handler(bind(&on_message, &s, ::_1, ::_2, vol));
-	s.set_open_handler(bind(&on_connect, &s, ::_1, vol));
+	s.set_message_handler(bind(&on_message, &s, ::_1, ::_2, wrapper));
+	s.set_open_handler(bind(&on_connect, &s, ::_1, wrapper));
 	s.set_access_channels(websocketpp::log::alevel::all);
 	s.set_error_channels(websocketpp::log::elevel::all);
 

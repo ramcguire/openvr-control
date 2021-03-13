@@ -140,9 +140,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="control-server.cpp" />
+    <ClCompile Include="DeviceWrapper.cpp" />
     <ClCompile Include="VolumeControl.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DeviceWrapper.h" />
     <ClInclude Include="VolumeControl.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

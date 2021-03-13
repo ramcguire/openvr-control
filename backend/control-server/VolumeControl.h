@@ -44,6 +44,7 @@ private:
     server* s;
     websocketpp::connection_hdl hdl;
     BOOL hasHandler;
+    BOOL volume;
 
     ~CVolumeMonitor();       // refcounted object... make the destructor private
     HRESULT AttachToDefaultEndpoint();
@@ -66,7 +67,7 @@ private:
     IFACEMETHODIMP QueryInterface(const IID& iid, void** ppUnk);
 
 public:
-    CVolumeMonitor(server*);
+    CVolumeMonitor(server*, BOOL);
 
     HRESULT Initialize();
     void    Dispose();

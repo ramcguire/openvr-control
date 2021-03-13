@@ -55,10 +55,18 @@ class App extends Component {
     let msg = JSON.parse(message.data);
     console.log(msg);
     if (msg.state) {
-      this.setState({
-        volume: msg.vVolume,
-        vMuted: msg.vMuted,
-      });
+      if (msg.type === "v") {
+        this.setState({
+          volume: msg.vVolume,
+          vMuted: msg.vMuted,
+        });
+      } else if (msg.type === "m") {
+        this.setState({
+          mVolume: msg.mVolume,
+          mMuted: msg.mMuted,
+        });
+      }
+      
     }
   }
 
